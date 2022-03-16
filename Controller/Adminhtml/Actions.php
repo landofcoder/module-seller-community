@@ -404,35 +404,38 @@ abstract class Actions extends \Magento\Backend\App\Action
     protected function _deleteAction()
     {
         $ids = $this->getRequest()->getParam($this->_idKey);
-
-        if (!is_array($ids)) {
-            $ids = [$ids];
-        }
-
-        $error = false;
-        try {
-            foreach ($ids as $id) {
-                $this->_objectManager->create($this->_modelClass)->load($id)->delete();
+        if ($ids) {
+            if (!is_array($ids)) {
+                $ids = [$ids];
             }
-        } catch (\Magento\Framework\Exception\LocalizedException $e) {
-            $error = true;
-            $this->messageManager->addError($e->getMessage());
-        } catch (\Exception $e) {
-            $error = true;
-            $this->messageManager->addException(
-                $e,
-                __(
-                    "We can't delete %1 right now. %2",
-                    strtolower($this->_getModel(false)->getOwnTitle()),
-                    $e->getMessage()
-                )
-            );
-        }
 
-        if (!$error) {
-            $this->messageManager->addSuccess(
-                __('%1 have been deleted.', $this->_getModel(false)->getOwnTitle(count($ids) > 1))
-            );
+            $error = false;
+            try {
+                foreach ($ids as $id) {
+                    $this->_objectManager->create($this->_modelClass)->load($id)->delete();
+                }
+            } catch (\Magento\Framework\Exception\LocalizedException $e) {
+                $error = true;
+                $this->messageManager->addError($e->getMessage());
+            } catch (\Exception $e) {
+                $error = true;
+                $this->messageManager->addException(
+                    $e,
+                    __(
+                        "We can't delete %1 right now. %2",
+                        strtolower($this->_getModel(false)->getOwnTitle()),
+                        $e->getMessage()
+                    )
+                );
+            }
+
+            if (!$error) {
+                $this->messageManager->addSuccess(
+                    __('%1 have been deleted.', $this->_getModel(false)->getOwnTitle(count($ids) > 1))
+                );
+            }
+        } else {
+            $this->_executeMassAction("delete");
         }
 
         $this->_redirect('*/*');
@@ -622,42 +625,44 @@ abstract class Actions extends \Magento\Backend\App\Action
     {
         $collection = $this->filter->getCollection($this->_getCollection());
         $count = $collection->getSize();
-        switch ($type) {
-            case "status":
-                $status = $this->getRequest()->getParam('status');
-                if ($flag !== null) {
-                    $status = (int)$flag;
-                }
-                $statusFieldName = $this->_statusField;
+        if ($count > 0) {
+            switch ($type) {
+                case "status":
+                    $status = $this->getRequest()->getParam('status');
+                    if ($flag !== null) {
+                        $status = (int)$flag;
+                    }
+                    $statusFieldName = $this->_statusField;
 
-                if (is_null($status)) {
-                    throw new \Exception(__('Parameter "Status" missing in request data.'));
-                }
+                    if (is_null($status)) {
+                        throw new \Exception(__('Parameter "Status" missing in request data.'));
+                    }
 
-                if (is_null($statusFieldName)) {
-                    throw new \Exception(__('Status Field Name is not specified.'));
-                }
+                    if (is_null($statusFieldName)) {
+                        throw new \Exception(__('Status Field Name is not specified.'));
+                    }
 
-                foreach ($collection as $item) {
-                    $this->_objectManager->create($this->_modelClass)
-                        ->load($item->getId())
-                        ->setData($this->_statusField, $status)
-                        ->save();
-                }
-                $this->messageManager->addSuccess(
-                    __('%1 items have been changed status.', $count)
-                );
-            break;
-            case "delete":
-                foreach ($collection as $item) {
-                    $item->delete();
-                }
-                $this->messageManager->addSuccess(
-                    __('%1 items have been deleted.', $count)
-                );
-            break;
-            default:
-            break;
+                    foreach ($collection as $item) {
+                        $this->_objectManager->create($this->_modelClass)
+                            ->load($item->getId())
+                            ->setData($this->_statusField, $status)
+                            ->save();
+                    }
+                    $this->messageManager->addSuccess(
+                        __('%1 items have been changed status.', $count)
+                    );
+                break;
+                case "delete":
+                    foreach ($collection as $item) {
+                        $item->delete();
+                    }
+                    $this->messageManager->addSuccess(
+                        __('%1 items have been deleted.', $count)
+                    );
+                break;
+                default:
+                break;
+            }
         }
     }
 
