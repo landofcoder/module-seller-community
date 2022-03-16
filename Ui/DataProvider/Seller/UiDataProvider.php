@@ -142,7 +142,7 @@ class UiDataProvider extends DataProvider
      */
     protected function initDataCollection()
     {
-        if (!empty($this->collectionClass)) {
+        if (!empty($this->_collectionClass)) {
             $this->collection = $this->_objectManager->create($this->_collectionClass);
         }
         return $this;
