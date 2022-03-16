@@ -23,6 +23,7 @@ namespace Lof\SellerCommunity\Controller\Adminhtml;
 
 use Magento\Framework\App\Request\DataPersistorInterface;
 use Magento\Backend\App\Action\Context;
+use Magento\Framework\App\Filesystem\DirectoryList;
 
 /**
  * Abstract admin controller
@@ -123,13 +124,29 @@ abstract class Actions extends \Magento\Backend\App\Action
      */
     public function execute()
     {
-        $_preparedActions = ['index', 'grid', 'new', 'edit', 'save', 'duplicate', 'delete', 'config', 'massStatus'];
+        $_preparedActions = ['index', 'grid', 'new', 'edit', 'save', 'duplicate', 'delete', 'massDelete', 'config', 'massStatus', 'massEnable', 'massDisable'];
         $_action = $this->getRequest()->getActionName();
+        $flag = null;
+        if ($_action == "massDelete") {
+            $_action = "delete";
+        }
+        if ($_action == "massEnable") {
+            $_action = "massStatus";
+            $flag = 1;
+        }
+        if ($_action == "massDisable") {
+            $_action = "massStatus";
+            $flag = 0;
+        }
         if (in_array($_action, $_preparedActions)) {
             $method = '_'.$_action.'Action';
 
             $this->_beforeAction();
-            $this->$method();
+            if ($flag !== null) {
+                $this->$method($flag);
+            } else {
+                $this->$method();
+            }
             $this->_afterAction();
         }
     }
@@ -409,59 +426,65 @@ abstract class Actions extends \Magento\Backend\App\Action
 
     /**
      * Change status action
+     * @var string|int|null $flag
      * @return void
      */
-    protected function _massStatusAction()
+    protected function _massStatusAction($flag = null)
     {
         $ids = $this->getRequest()->getParam($this->_idKey);
-
-        if (!is_array($ids)) {
-            $ids = [$ids];
-        }
-
-        $model = $this->_getModel(false);
-
-        $error = false;
-
-        try {
-            $status = $this->getRequest()->getParam('status');
-            $statusFieldName = $this->_statusField;
-
-            if (is_null($status)) {
-                throw new \Exception(__('Parameter "Status" missing in request data.'));
+        if ($ids) {
+            if (!is_array($ids)) {
+                $ids = [$ids];
             }
 
-            if (is_null($statusFieldName)) {
-                throw new \Exception(__('Status Field Name is not specified.'));
+            $model = $this->_getModel(false);
+
+            $error = false;
+
+            try {
+                $status = $this->getRequest()->getParam('status');
+                if ($flag !== null) {
+                    $status = (int)$flag;
+                }
+                $statusFieldName = $this->_statusField;
+
+                if (is_null($status)) {
+                    throw new \Exception(__('Parameter "Status" missing in request data.'));
+                }
+
+                if (is_null($statusFieldName)) {
+                    throw new \Exception(__('Status Field Name is not specified.'));
+                }
+
+                foreach ($ids as $id) {
+                    $this->_objectManager->create($this->_modelClass)
+                        ->load($id)
+                        ->setData($this->_statusField, $status)
+                        ->save();
+                }
+            } catch (\Magento\Framework\Exception\LocalizedException $e) {
+                $error = true;
+                $this->messageManager->addError($e->getMessage());
+            } catch (\Exception $e) {
+                $error = true;
+                $this->messageManager->addException(
+                    $e,
+                    __(
+                        "We can't change status of %1 right now. %2",
+                        strtolower($model->getOwnTitle()),
+                        $e->getMessage()
+                    )
+                );
             }
 
-            foreach ($ids as $id) {
-                $this->_objectManager->create($this->_modelClass)
-                    ->load($id)
-                    ->setData($this->_statusField, $status)
-                    ->save();
+            if (!$error) {
+                $this->messageManager->addSuccess(
+                    __('%1 status have been changed.', $model->getOwnTitle(count($ids) > 1))
+                );
             }
-        } catch (\Magento\Framework\Exception\LocalizedException $e) {
-            $error = true;
-            $this->messageManager->addError($e->getMessage());
-        } catch (\Exception $e) {
-            $error = true;
-            $this->messageManager->addException(
-                $e,
-                __(
-                    "We can't change status of %1 right now. %2",
-                    strtolower($model->getOwnTitle()),
-                    $e->getMessage()
-                )
-            );
+        } else {
+            $this->_executeMassAction("status", $flag);
         }
-
-        if (!$error) {
-            $this->messageManager->addSuccess(
-                __('%1 status have been changed.', $model->getOwnTitle(count($ids) > 1))
-            );
-        }
-
         $this->_redirect('*/*');
     }
 
@@ -560,6 +583,106 @@ abstract class Actions extends \Magento\Backend\App\Action
             $this->helperData = $this->_objectManager->create($this->helperDataClass);
         }
         return $this->helperData;
+    }
+
+    /**
+     * Retrieve model object
+     * @return \Magento\Framework\Model\ResourceModel\Db\Collection|mixed
+     */
+    protected function _getCollection()
+    {
+        if (is_null($this->_collection)) {
+            $this->_collection = $this->_objectManager->create($this->_collectionClass);
+        }
+        return $this->_collection;
+    }
+
+    /**
+     * execute mass action
+     *
+     * @param string $type
+     * @param mixed|null $flag
+     * @return void
+     */
+    protected function _executeMassAction($type = "status", $flag = null)
+    {
+        $collection = $this->filter->getCollection($this->_getCollection());
+        $count = $collection->getSize();
+        switch ($type) {
+            case "status":
+                $status = $this->getRequest()->getParam('status');
+                if ($flag !== null) {
+                    $status = (int)$flag;
+                }
+                $statusFieldName = $this->_statusField;
+
+                if (is_null($status)) {
+                    throw new \Exception(__('Parameter "Status" missing in request data.'));
+                }
+
+                if (is_null($statusFieldName)) {
+                    throw new \Exception(__('Status Field Name is not specified.'));
+                }
+
+                foreach ($collection as $item) {
+                    $this->_objectManager->create($this->_modelClass)
+                        ->load($item->getId())
+                        ->setData($this->_statusField, $status)
+                        ->save();
+                }
+                $this->messageManager->addSuccess(
+                    __('%1 items have been changed status.', $count)
+                );
+            break;
+            case "delete":
+                foreach ($collection as $item) {
+                    $item->delete();
+                }
+                $this->messageManager->addSuccess(
+                    __('%1 items have been deleted.', $count)
+                );
+            break;
+            default:
+            break;
+        }
+    }
+
+    /**
+     * upload image
+     *
+     * @param string $fieldId
+     * @return string|mixed
+     */
+    public function uploadImage($fieldId = 'image')
+    {
+        if (isset($_FILES[$fieldId]) && $_FILES[$fieldId]['name']!='') {
+            $uploader = $this->_objectManager->create(
+                'Magento\Framework\File\Uploader',
+                array('fileId' => $fieldId)
+            );
+            $fieldId = $this->getRequest()->getParam($this->_idKey);
+            /** @var \Magento\Framework\Filesystem\Directory\Read $mediaDirectory */
+            $mediaDirectory = $this->_objectManager->get('Magento\Framework\Filesystem')
+                                    ->getDirectoryRead(DirectoryList::MEDIA);
+
+            try {
+                $uploader->setAllowedExtensions(array('jpg','jpeg','gif','png'));
+                $uploader->setAllowRenameFiles(true);
+                $uploader->setFilesDispersion(false);
+                $result = $uploader->save($mediaDirectory->getAbsolutePath($this->_mediaFolder)
+                    );
+                return $this->_mediaFolder.$result['name'];
+            } catch (\Exception $e) {
+                $this->_logger->critical($e);
+                $this->messageManager->addError($e->getMessage());
+                if ($fieldId) {
+                    $this->_redirect('*/*/edit', [$this->_idKey => $fieldId]);
+                } else {
+                    $this->_redirect('*/*');
+                }
+            }
+        }
+        return "";
     }
 
 }
