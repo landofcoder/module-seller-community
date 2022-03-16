@@ -24,6 +24,7 @@ namespace Lof\SellerCommunity\Controller\Adminhtml;
 use Magento\Framework\App\Request\DataPersistorInterface;
 use Magento\Backend\App\Action\Context;
 use Magento\Framework\App\Filesystem\DirectoryList;
+use Magento\Ui\Component\MassAction\Filter;
 
 /**
  * Abstract admin controller
@@ -85,6 +86,11 @@ abstract class Actions extends \Magento\Backend\App\Action
     protected $_model;
 
     /**
+     * @var Filter
+     */
+    protected $filter;
+
+    /**
      * Core registry
      *
      * @var \Magento\Framework\Registry
@@ -114,12 +120,15 @@ abstract class Actions extends \Magento\Backend\App\Action
     /**
      * @param Context $context
      * @param DataPersistorInterface $dataPersistor
+     * @param Filter $filter
      */
     public function __construct(
         Context $context,
-        DataPersistorInterface $dataPersistor
+        DataPersistorInterface $dataPersistor,
+        Filter $filter
     ) {
         $this->dataPersistor = $dataPersistor;
+        $this->filter = $filter;
         parent::__construct($context);
     }
 
