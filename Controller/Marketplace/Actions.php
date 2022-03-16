@@ -328,7 +328,8 @@ abstract class Actions extends \Magento\Framework\App\Action\Action
      */
     public function validate($modelSellerId, $actionName = null)
     {
-        $sellerId = $this->helper->getSellerId();
+        $currentSeller = $this->getCurrentSeller();
+        $sellerId = $currentSeller ? $currentSeller->getId() : 0;
         if ($modelSellerId != $sellerId) {
             $this->messageManager->addErrorMessage(__('You don\'t have permission to access the action'));
             return false;
@@ -353,7 +354,7 @@ abstract class Actions extends \Magento\Framework\App\Action\Action
             }
         }
         $sellerState = $this->getSellerState();
-        switch($sellerState){
+        switch ($sellerState) {
             case "approved":
                 if (!$this->_getRegistry()->registry('current_seller_id')) {
                     $seller = $this->getCurrentSeller();

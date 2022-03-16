@@ -90,14 +90,23 @@ abstract class Actions extends \Magento\Backend\App\Action
      */
     protected $_coreRegistry = null;
 
-
     /**
      * @var DataPersistorInterface
      */
     protected $dataPersistor;
 
     /**
-     * @param Action\Context $context
+     * @var mixed|null
+     */
+    protected $helperData;
+
+    /**
+     * @var string
+     */
+    protected $helperDataClass;
+
+    /**
+     * @param Context $context
      * @param DataPersistorInterface $dataPersistor
      */
     public function __construct(
@@ -540,4 +549,17 @@ abstract class Actions extends \Magento\Backend\App\Action
         }
         return $this->_model;
     }
+
+    /**
+     * Retrieve helper data object
+     * @return mixed
+     */
+    public function getHelperData()
+    {
+        if (is_null($this->helperData)) {
+            $this->helperData = $this->_objectManager->create($this->helperDataClass);
+        }
+        return $this->helperData;
+    }
+
 }
