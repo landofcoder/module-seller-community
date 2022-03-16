@@ -78,11 +78,6 @@ abstract class Actions extends \Magento\Framework\App\Action\Action
     protected $filter;
 
     /**
-     * @var ProductFactory
-     */
-    private $auctionFactory;
-
-    /**
      * @var Url
      */
     protected $frontendUrl;

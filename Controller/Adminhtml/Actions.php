@@ -107,6 +107,11 @@ abstract class Actions extends \Magento\Backend\App\Action
     protected $helperDataClass;
 
     /**
+     * @var string
+     */
+    protected $_mediaFolder = 'lof/community/';
+
+    /**
      * @param Context $context
      * @param DataPersistorInterface $dataPersistor
      */
