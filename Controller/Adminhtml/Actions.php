@@ -50,6 +50,12 @@ abstract class Actions extends \Magento\Backend\App\Action
     protected $_modelClass;
 
     /**
+     * Collection class name
+     * @var string
+     */
+    protected $_collectionClass;
+
+    /**
      * Active menu key
      * @var string
      */
@@ -84,6 +90,12 @@ abstract class Actions extends \Magento\Backend\App\Action
      * @var \Magento\Framework\Model\AbstractModel
      */
     protected $_model;
+
+    /**
+     * Colelction Object
+     * @var \Magento\Framework\Model\Resource\Db\Collection|mixed
+     */
+    protected $_collection;
 
     /**
      * @var Filter
