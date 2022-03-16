@@ -477,7 +477,7 @@ abstract class Actions extends \Magento\Framework\App\Action\Action
     {
         try {
             $model = $this->_getModel();
-            $id = $this->getRequest()->getParam('id');
+            $id = $this->getRequest()->getParam($this->_idKey);
             if (!$model->getId() && $id) {
                 throw new \Exception("Item is not longer exist.", 1);
             }
